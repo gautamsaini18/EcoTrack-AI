@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { EMISSION_FACTORS, COMPARISONS } from '@/lib/calculator';
 
 const apiKey = process.env.OPENAI_API_KEY;
 let openai = null;
@@ -7,21 +8,13 @@ if (apiKey && apiKey !== 'YOUR_OPENAI_API_KEY' && apiKey.length > 20) {
   openai = new OpenAI({ apiKey });
 }
 
-const EMISSION_FACTORS = {
-  transport: { petrol: 0.18, diesel: 0.17, hybrid: 0.10, electric: 0.04, motorcycle: 0.10, transit: 0.03, walk_bike: 0.0 },
-  electricity: { gridIntensity: 0.42 },
-  food: { heavy_meat: 2.5, average_meat: 1.8, vegetarian: 1.1, vegan: 0.6 },
-  waste: { perBag: 2.1, recycleDiscount: 0.4 },
-  shopping: { minimalist: 45, average: 140, heavy: 320 }
-};
-
-const COMPARISONS = {
-  treePerKg: 1 / 1.83,
-  carKmPerKg: 1 / 0.18,
-  phoneChargePerKg: 1 / 0.005,
-  burgerPerKg: 1 / 2.5
-};
-
+/**
+ * Build the system prompt for the AI assistant with user context.
+ * @param {string} name - User's display name
+ * @param {number} goal - Monthly carbon budget in kg CO₂
+ * @param {Object} metrics - User's carbon footprint breakdown
+ * @returns {string} System prompt for OpenAI
+ */
 function buildSystemPrompt(name, goal, metrics) {
   const b = metrics?.breakdown || {};
   const total = metrics?.total ?? 'Unknown';
@@ -91,8 +84,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Conversation too long, please start a new chat' }, { status: 400 });
     }
 
-    const displayName = userProfile?.displayName || 'Eco Pioneer';
-    const goal = userProfile?.monthlyGoal || 400;
+    const MAX_CONTENT_LENGTH = 2000;
+    for (const msg of messages) {
+      if (typeof msg?.content !== 'string' || msg.content.length > MAX_CONTENT_LENGTH) {
+        return NextResponse.json(
+          { error: `Each message must be a string under ${MAX_CONTENT_LENGTH} characters` },
+          { status: 400 }
+        );
+      }
+    }
+
+    const displayName = typeof userProfile?.displayName === 'string' ? userProfile.displayName : 'Eco Pioneer';
+    const goal = typeof userProfile?.monthlyGoal === 'number' ? userProfile.monthlyGoal : 400;
 
     const latestMessage = messages[messages.length - 1];
     if (!latestMessage || !latestMessage.content || typeof latestMessage.content !== 'string') {
@@ -127,7 +130,7 @@ export async function POST(request) {
   }
 }
 
-function getTopCategory(metrics) {
+export function getTopCategory(metrics) {
   const cats = [
     { name: 'Transport', value: metrics?.breakdown?.transport ?? 0 },
     { name: 'Home Energy', value: metrics?.breakdown?.electricity ?? 0 },
@@ -149,7 +152,7 @@ function makeComparison(kgCo2) {
   return `That saves as much CO₂ as **${trees} trees** absorb in a month 🌳, or driving **${carKm} km** less 🚗.`;
 }
 
-function generateHeuristicResponse(userPrompt, metrics, name, goal) {
+export function generateHeuristicResponse(userPrompt, metrics, name, goal) {
   const query = userPrompt.toLowerCase();
   const transport = metrics?.breakdown?.transport ?? 180;
   const electricity = metrics?.breakdown?.electricity ?? 120;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   ResponsiveContainer,
   PieChart,
@@ -17,11 +17,7 @@ import {
 } from 'recharts';
 
 export default function DashboardCharts({ logs, userGoal }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [mounted] = useState(() => typeof window !== 'undefined');
 
   if (!mounted) {
     return (

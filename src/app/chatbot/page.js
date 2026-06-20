@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { dbGetLogs } from '@/lib/db';
@@ -25,11 +27,13 @@ export default function Chatbot() {
   const [sending, setSending] = useState(false);
   const [latestLog, setLatestLog] = useState(null);
   const [topCategory, setTopCategory] = useState(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const msgCounter = useRef(0);
 
   const messagesEndRef = useRef(null);
 
-  const loadLogsAndGreet = async () => {
+  const loadLogsAndGreet = useCallback(async () => {
+    if (!user) return;
     try {
       const logs = await dbGetLogs(user.uid);
       const latest = logs[0] || null;
@@ -69,7 +73,7 @@ export default function Chatbot() {
         { role: 'assistant', content: `Hello! I'm your EcoTrack AI coach. Ask me anything about reducing your carbon footprint!`, id: 'greet' }
       ]);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!loading) {
@@ -138,9 +142,13 @@ export default function Chatbot() {
   };
 
   const resetChat = () => {
-    if (confirm("Reset current conversation thread?")) {
-      loadLogsAndGreet();
-    }
+    setShowResetConfirm(true);
+  };
+
+  const confirmReset = () => {
+    setShowResetConfirm(false);
+    setMessages([]);
+    loadLogsAndGreet();
   };
 
   const renderMessageContent = (content) => {
@@ -256,11 +264,21 @@ export default function Chatbot() {
         <button
           onClick={resetChat}
           className="p-2.5 text-gray-500 hover:text-white rounded-xl hover:bg-white/5 transition-all cursor-pointer"
-          title="Reset chat session"
+          aria-label="Reset chat conversation"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
+
+      {showResetConfirm && (
+        <div className="mb-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-sm flex items-center justify-between gap-4" role="alertdialog" aria-label="Confirm reset">
+          <span className="text-amber-200">Reset the entire conversation?</span>
+          <div className="flex gap-2">
+            <button onClick={() => setShowResetConfirm(false)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer">Cancel</button>
+            <button onClick={confirmReset} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-all cursor-pointer">Reset</button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-grow glass-panel rounded-2xl p-5 overflow-y-auto max-h-[calc(100vh-18rem)] space-y-5 mb-4">
 
@@ -355,6 +373,7 @@ export default function Chatbot() {
         <button
           type="submit"
           disabled={sending || !input.trim()}
+          aria-label="Send message"
           className="p-3.5 rounded-2xl gradient-green-btn text-white shadow-lg shadow-emerald-500/10 transition-all hover:scale-105 active:scale-100 disabled:opacity-40 cursor-pointer"
         >
           <Send className="w-4 h-4" />

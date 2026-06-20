@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, use, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Leaf, Mail, Lock, User, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
@@ -10,21 +10,12 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const { user, signUp, signIn, loading, isMock } = useAuth();
 
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(() => searchParams.get('mode') === 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    const mode = searchParams.get('mode');
-    if (mode === 'signup') {
-      setIsSignUp(true);
-    } else {
-      setIsSignUp(false);
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     if (user) {

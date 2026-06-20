@@ -86,6 +86,7 @@ export default function Navbar() {
                 </div>
                 <button
                   onClick={signOut}
+                  aria-label="Sign out"
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-rose-400/70 hover:text-rose-300 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10 transition-all duration-200 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />

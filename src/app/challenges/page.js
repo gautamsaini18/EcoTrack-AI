@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { dbGetCompletedChallenges, dbCompleteChallenge } from '@/lib/db';
@@ -108,7 +110,8 @@ export default function Challenges() {
     ]
   };
 
-  const fetchCompletedChallenges = async () => {
+  const fetchCompletedChallenges = useCallback(async () => {
+    if (!user) return;
     setLoadingCompleted(true);
     try {
       const data = await dbGetCompletedChallenges(user.uid);
@@ -118,7 +121,7 @@ export default function Challenges() {
     } finally {
       setLoadingCompleted(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!loading) {
@@ -137,7 +140,7 @@ export default function Challenges() {
     );
 
     if (alreadyDone) {
-      setActionMessage(`You already completed "{challenge.title}" today!`);
+      setActionMessage(`You already completed "${challenge.title}" today!`);
       clearMessage();
       return;
     }
@@ -151,7 +154,7 @@ export default function Challenges() {
       );
 
       setCompletedList(prev => [...prev, result]);
-      setActionMessage(`Completed "{challenge.title}" — saved {challenge.co2Saved} kg CO₂ (+{challenge.points} pts)`);
+      setActionMessage(`Completed "${challenge.title}" — saved ${challenge.co2Saved} kg CO₂ (+${challenge.points} pts)`);
       clearMessage();
     } catch (e) {
       console.error(e);
@@ -219,7 +222,7 @@ export default function Challenges() {
       </div>
 
       {actionMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm font-semibold animate-slide-up text-center max-w-2xl mx-auto">
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm font-semibold animate-slide-up text-center max-w-2xl mx-auto" role="alert" aria-live="polite">
           {actionMessage}
         </div>
       )}

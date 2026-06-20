@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { dbAddLog } from '@/lib/db';
@@ -35,21 +35,16 @@ export default function Calculator() {
   const [recycles, setRecycles] = useState(true);
   const [shoppingHabit, setShoppingHabit] = useState('average');
 
-  const [currentFootprint, setCurrentFootprint] = useState({ breakdown: {}, total: 0, treesEquivalent: 0 });
-
-  useEffect(() => {
-    const calculated = calculateCarbonFootprint({
-      dailyDistance,
-      vehicleType,
-      electricityUsage,
-      renewableShare,
-      foodPreference,
-      wasteBags,
-      recycles,
-      shoppingHabit
-    });
-    setCurrentFootprint(calculated);
-  }, [dailyDistance, vehicleType, electricityUsage, renewableShare, foodPreference, wasteBags, recycles, shoppingHabit]);
+  const currentFootprint = useMemo(() => calculateCarbonFootprint({
+    dailyDistance,
+    vehicleType,
+    electricityUsage,
+    renewableShare,
+    foodPreference,
+    wasteBags,
+    recycles,
+    shoppingHabit
+  }), [dailyDistance, vehicleType, electricityUsage, renewableShare, foodPreference, wasteBags, recycles, shoppingHabit]);
 
   const handleNext = () => {
     if (step < totalSteps) setStep(step + 1);
@@ -147,8 +142,11 @@ export default function Calculator() {
                 min="0"
                 max="150"
                 value={dailyDistance}
-                onChange={(e) => setDailyDistance(parseInt(e.target.value))}
+                onChange={(e) => setDailyDistance(parseInt(e.target.value, 10))}
                 className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                aria-valuemin={0}
+                aria-valuemax={150}
+                aria-valuenow={dailyDistance}
               />
               <div className="flex justify-between text-[10px] text-gray-600 font-mono">
                 <span>0 km</span>
@@ -209,8 +207,11 @@ export default function Calculator() {
                 max="1000"
                 step="20"
                 value={electricityUsage}
-                onChange={(e) => setElectricityUsage(parseInt(e.target.value))}
+                onChange={(e) => setElectricityUsage(parseInt(e.target.value, 10))}
                 className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                aria-valuemin={0}
+                aria-valuemax={1000}
+                aria-valuenow={electricityUsage}
               />
               <div className="flex justify-between text-[10px] text-gray-600 font-mono">
                 <span>0 kWh</span>
@@ -230,8 +231,11 @@ export default function Calculator() {
                 max="100"
                 step="5"
                 value={renewableShare}
-                onChange={(e) => setRenewableShare(parseInt(e.target.value))}
+                onChange={(e) => setRenewableShare(parseInt(e.target.value, 10))}
                 className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={renewableShare}
               />
               <div className="flex justify-between text-[10px] text-gray-600 font-mono">
                 <span>0%</span>
@@ -333,8 +337,11 @@ export default function Calculator() {
                 min="0"
                 max="8"
                 value={wasteBags}
-                onChange={(e) => setWasteBags(parseInt(e.target.value))}
+                onChange={(e) => setWasteBags(parseInt(e.target.value, 10))}
                 className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                aria-valuemin={0}
+                aria-valuemax={8}
+                aria-valuenow={wasteBags}
               />
               <div className="flex justify-between text-[10px] text-gray-600 font-mono">
                 <span>0 Bags</span>

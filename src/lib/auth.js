@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 // Dual-Mode Authentication Provider
 // Integrates Firebase Auth when keys are present in .env.local,
 // otherwise falls back to a sandbox simulation in browser localStorage.
@@ -15,6 +17,31 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { dbGetUserProfile, dbUpdateUserProfile } from './db';
+
+const SALT = 'ecotrack-sandbox-v1';
+
+/**
+ * Hash a password using the Web Crypto API (SHA-256).
+ * Falls back to a simple hash if SubtleCrypto is unavailable.
+ * @param {string} password
+ * @returns {Promise<string>} hex-encoded hash
+ */
+async function hashPassword(password) {
+  if (typeof crypto?.subtle?.digest !== 'function') {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+      const char = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash |= 0;
+    }
+    return (hash >>> 0).toString(16);
+  }
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + SALT);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -130,13 +157,14 @@ export function AuthProvider({ children }) {
           throw new Error('Email is already registered inside sandbox database.');
         }
 
+        const passwordHash = await hashPassword(password);
         const newUid = 'mock_usr_' + Date.now();
         const newMockUser = {
           uid: newUid,
           email: email.toLowerCase(),
           displayName,
           monthlyGoal: 400,
-          password // plaintext in sandbox storage
+          passwordHash
         };
 
         users.push(newMockUser);
@@ -184,9 +212,12 @@ export function AuthProvider({ children }) {
       } else {
         // Mock Sandbox Sign In
         const users = JSON.parse(window.localStorage.getItem('ecotrack_users') || '[]');
-        const target = users.find(
-          u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-        );
+        const passwordHash = await hashPassword(password);
+        const target = users.find(u => {
+          if (u.email.toLowerCase() !== email.toLowerCase()) return false;
+          if (u.passwordHash) return u.passwordHash === passwordHash;
+          return u.password === password;
+        });
 
         if (!target) {
           throw new Error('Invalid email or password credentials in sandbox.');

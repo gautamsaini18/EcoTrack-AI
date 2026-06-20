@@ -1,6 +1,16 @@
 // Standard Carbon Footprint Calculation Utilities
 // Values represent approximate kg CO2 equivalents.
 
+/** Tree equivalence: 1 mature tree absorbs ~22kg CO2/year = ~1.83kg/month */
+const TREE_ABSORPTION_PER_MONTH = 1.83;
+
+export const COMPARISONS = {
+  treePerKg: 1 / TREE_ABSORPTION_PER_MONTH,
+  carKmPerKg: 1 / 0.18,
+  phoneChargePerKg: 1 / 0.005,
+  burgerPerKg: 1 / 2.5
+};
+
 export const EMISSION_FACTORS = {
   // Vehicle transport: kg CO2 per km
   transport: {
@@ -61,13 +71,18 @@ export function calculateCarbonFootprint(inputs) {
     shoppingHabit = 'average'
   } = inputs;
 
+  const sanitizedDistance = Math.max(0, Number(dailyDistance) || 0);
+  const sanitizedElectricity = Math.max(0, Number(electricityUsage) || 0);
+  const sanitizedRenewable = Math.min(100, Math.max(0, Number(renewableShare) || 0));
+  const sanitizedWasteBags = Math.max(0, Number(wasteBags) || 0);
+
   // 1. Transport emissions (monthly = daily distance * 30 * factor)
   const transportFactor = EMISSION_FACTORS.transport[vehicleType] || 0;
-  const transportEmissions = parseFloat((dailyDistance * 30 * transportFactor).toFixed(2));
+  const transportEmissions = parseFloat((sanitizedDistance * 30 * transportFactor).toFixed(2));
 
   // 2. Electricity emissions (monthly = usage * intensity * (1 - renewableShare %))
-  const cleanElectricityIntensity = EMISSION_FACTORS.electricity.gridIntensity * (1 - (renewableShare / 100));
-  const electricityEmissions = parseFloat((electricityUsage * cleanElectricityIntensity).toFixed(2));
+  const cleanElectricityIntensity = EMISSION_FACTORS.electricity.gridIntensity * (1 - (sanitizedRenewable / 100));
+  const electricityEmissions = parseFloat((sanitizedElectricity * cleanElectricityIntensity).toFixed(2));
 
   // 3. Food emissions (monthly = daily emissions * 30)
   const foodFactor = EMISSION_FACTORS.food[foodPreference] || EMISSION_FACTORS.food.vegetarian;
@@ -76,7 +91,7 @@ export function calculateCarbonFootprint(inputs) {
   // 4. Waste emissions (monthly = weekly bags * 4.33 weeks/month * emissions * recycle offset)
   const wasteFactor = EMISSION_FACTORS.waste.perBag;
   const recycleMultiplier = recycles ? (1 - EMISSION_FACTORS.waste.recycleDiscount) : 1.0;
-  const wasteEmissions = parseFloat((wasteBags * 4.33 * wasteFactor * recycleMultiplier).toFixed(2));
+  const wasteEmissions = parseFloat((sanitizedWasteBags * 4.33 * wasteFactor * recycleMultiplier).toFixed(2));
 
   // 5. Shopping emissions (monthly)
   const shoppingEmissions = EMISSION_FACTORS.shopping[shoppingHabit] || EMISSION_FACTORS.shopping.average;
@@ -95,17 +110,20 @@ export function calculateCarbonFootprint(inputs) {
       shopping: shoppingEmissions
     },
     total: totalEmissions,
-    // Add references like trees needed to offset this monthly footprint
-    // 1 mature tree absorbs about 22kg of CO2 per year, which is ~1.83kg per month
-    treesEquivalent: Math.round(totalEmissions / 1.83)
+    treesEquivalent: Math.round(totalEmissions / TREE_ABSORPTION_PER_MONTH)
   };
 }
 
 /**
  * Get friendly comparative context for a footprint score.
- * US Average: ~1,300 kg CO2/month per person
- * European Average: ~600 kg CO2/month per person
- * World Target for Climate Goals: ~160 kg CO2/month per person
+ *
+ * Reference points:
+ * - US Average: ~1,300 kg CO₂/month per person
+ * - European Average: ~600 kg CO₂/month per person
+ * - World Target for Climate Goals: ~160 kg CO₂/month per person
+ *
+ * @param {number} monthlyTotal - Total monthly carbon footprint in kg CO₂
+ * @returns {{ grade: string, color: string, description: string }}
  */
 export function getEmissionRating(monthlyTotal) {
   if (monthlyTotal < 180) {

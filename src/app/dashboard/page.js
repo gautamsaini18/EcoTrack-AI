@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { dbGetLogs, dbGetUserProfile } from '@/lib/db';
@@ -27,7 +29,8 @@ export default function Dashboard() {
   const [logsLoading, setLogsLoading] = useState(true);
   const [displayUnit, setDisplayUnit] = useState('co2');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!user) return;
     setLogsLoading(true);
     try {
       const userLogs = await dbGetLogs(user.uid);
@@ -37,7 +40,7 @@ export default function Dashboard() {
     } finally {
       setLogsLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!loading) {
